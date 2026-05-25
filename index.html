@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NutriFlow Vision</title>
+    <!-- Use Inter font for Apple Health-style minimalist aesthetic -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Top Navigation & Budgets -->
+    <header class="top-nav">
+        <div class="logo" id="logo-admin-trigger" style="cursor: pointer;" title="Double-click for Secret Admin Menu">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            <h1>NutriFlow Vision</h1>
+        </div>
+        <div class="budget-panel">
+            <div class="budget-item" id="budget-cal">
+                <span class="label">Calories</span>
+                <span class="value">0 / 2000</span>
+            </div>
+            <div class="budget-item" id="budget-sodium">
+                <span class="label">Sodium</span>
+                <span class="value">0 / 2300mg</span>
+            </div>
+            <div class="budget-item" id="budget-sugar">
+                <span class="label">Sugar</span>
+                <span class="value">0 / 24g</span>
+            </div>
+            <button class="btn-profile" id="btn-open-profile" title="Health Profile Settings">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            </button>
+            <button class="btn secondary" id="btn-login-header" style="padding: 0.4rem 0.8rem; font-size: 0.75rem;">
+                Sign In
+            </button>
+            <div id="user-avatar-container" class="hidden">
+                <img id="user-avatar" src="" alt="User" style="width: 32px; height: 32px; border-radius: 50%; border: 2px solid var(--emerald-500);">
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <main class="workspace">
+        
+        <!-- Left Column: Scanner Unit -->
+        <section class="scanner-unit card">
+            <div class="scanner-controls">
+                <button id="btn-camera" class="btn primary">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                    Live Camera
+                </button>
+                <button id="btn-upload" class="btn secondary">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+                    Upload / Preset
+                </button>
+                <input type="file" id="file-input" accept="image/*" class="hidden">
+            </div>
+
+            <!-- Viewfinder Area -->
+            <div class="viewfinder-container" id="viewfinder">
+                <div class="viewfinder-placeholder">
+                    <p>Select a camera or upload a nutrition label to scan</p>
+                </div>
+                <!-- Video Element for Live Camera -->
+                <video id="camera-stream" autoplay playsinline class="hidden"></video>
+                <!-- Canvas to hold snapped image -->
+                <canvas id="snapshot-canvas" class="hidden"></canvas>
+                
+                <div class="scan-overlay hidden" id="scan-overlay">
+                    <div class="laser-line"></div>
+                </div>
+                
+                <div class="shutter-control hidden" id="shutter-control">
+                    <button id="btn-snap" class="btn-shutter"></button>
+                </div>
+            </div>
+
+            <!-- Preloaded Thai Presets (will be populated by JS) -->
+            <div class="presets-gallery" id="presets-gallery">
+                <!-- Preset buttons injected here -->
+            </div>
+
+            <!-- AI Processing Console -->
+            <div class="ai-console">
+                <div class="console-header">Vision AI Log</div>
+                <div class="console-body" id="ai-logs">
+                    <p class="log-line text-muted">System ready. Awaiting input...</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Right Column: Verification & Profiler -->
+        <section class="verification-unit">
+            
+            <div class="card health-profiler hidden" id="health-profiler">
+                <div class="score-header">
+                    <div class="health-score-circle" id="health-score-display">
+                        <span class="score-value">85</span>
+                    </div>
+                    <div>
+                        <h3 id="result-name">Product Name</h3>
+                        <p class="text-muted text-sm">AI Health Analysis</p>
+                    </div>
+                </div>
+                
+                <div class="diet-badges" style="margin-bottom: 1rem;">
+                    <div class="diet-badge" id="badge-keto">Keto</div>
+                    <div class="diet-badge" id="badge-low-sodium">Low Sodium</div>
+                </div>
+                
+                <div id="ai-summary-display" style="background: var(--bg-main); padding: 1rem; border-radius: 8px; margin-bottom: 1rem; font-size: 0.875rem; color: var(--text-main); border: 1px solid var(--border-light);">
+                    AI Summary goes here...
+                </div>
+                
+                <button id="btn-edit-scan" class="btn secondary full-width">📝 Edit Data (Verifiable Loop)</button>
+            </div>
+
+            <!-- Verified Catalog Snippet -->
+            <div class="card catalog-preview">
+                <h2>My Verified Catalog</h2>
+                <ul id="catalog-list" class="catalog-list">
+                    <li class="text-muted text-sm">No items verified yet.</li>
+                </ul>
+            </div>
+            
+        </section>
+
+    </main>
+
+    <!-- SQL Query Terminal Simulator (Bottom Panel) -->
+    <footer class="sql-terminal">
+        <div class="terminal-header">
+            <span>SQL Query Developer Console</span>
+            <span class="status-indicator online"></span>
+        </div>
+        <div class="terminal-body" id="sql-logs">
+            <div class="sql-line"><span class="sql-keyword">--</span> MariaDB Connection Established</div>
+        </div>
+    </footer>
+
+    <!-- Onboarding / Profile Setup Modal -->
+    <div class="modal-overlay" id="modal-onboarding">
+        <div class="modal card">
+            <h2>Welcome to NutriFlow Vision</h2>
+            <p class="text-muted text-sm mb-4">Set your profile to calculate your exact TDEE / BMR. This makes the Health Score truly personalized!</p>
+            
+            <form id="profile-form">
+                <div class="form-group">
+                    <label>Gender</label>
+                    <select id="profile-gender">
+                        <option value="male">Male</option>
+                        <option value="female">Female</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Age</label>
+                    <input type="number" id="profile-age" value="26">
+                </div>
+                <div class="form-group">
+                    <label>Weight (kg)</label>
+                    <input type="number" id="profile-weight" value="70">
+                </div>
+                <div class="form-group">
+                    <label>Height (cm)</label>
+                    <input type="number" id="profile-height" value="175">
+                </div>
+                <div class="form-group">
+                    <label>Goal</label>
+                    <select id="profile-goal">
+                        <option value="maintain">Maintain Weight</option>
+                        <option value="lose">Lose Weight</option>
+                        <option value="gain">Gain Muscle</option>
+                    </select>
+                </div>
+                <!-- API Key removed from here for end-user safety -->
+                <div class="modal-actions">
+                    <button type="button" id="btn-skip-profile" class="btn secondary">Skip / ตั้งค่าภายหลัง</button>
+                    <button type="submit" class="btn primary">Save Profile</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Freemium Conversion Modal -->
+    <div class="modal-overlay hidden" id="modal-login">
+        <div class="modal card" style="text-align: center;">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--emerald-500)" stroke-width="2" style="margin: 0 auto 1rem;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            <h2>Unlock Unlimited Scans</h2>
+            <p class="text-muted text-sm mb-4">You have reached the free scan limit for guests. Sign in with Gmail to save unlimited items and sync across devices!</p>
+            <div class="modal-actions" style="justify-content: center; flex-direction: column;">
+                <button id="btn-google-login" class="btn primary full-width" style="margin-bottom: 0.5rem; background-color: #4285F4;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M21.35 11.1h-9.17v2.73h6.51c-.33 3.81-3.5 5.44-6.5 5.44C8.36 19.27 5 16.25 5 12c0-4.1 3.2-7.27 7.2-7.27 3.09 0 4.9 1.97 4.9 1.97L19 4.72S16.56 2 12.1 2C6.42 2 2.03 6.8 2.03 12c0 5.05 4.13 10 10.22 10 5.35 0 9.25-3.67 9.25-9.09 0-1.15-.15-1.81-.15-1.81z"/></svg>
+                    Sign in with Google
+                </button>
+                <button type="button" id="btn-close-login" class="btn secondary full-width">Not right now</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Secret Admin Panel -->
+    <div class="modal-overlay hidden" id="modal-admin">
+        <div class="modal card">
+            <h2 style="color: var(--red-500);">🔒 Secret Admin Panel</h2>
+            <p class="text-muted text-sm mb-4">Set your Gemini API Key here. This is hidden from normal users.</p>
+            <div class="form-group">
+                <label>Gemini API Key</label>
+                <input type="password" id="admin-apikey" placeholder="Enter AI Studio Key...">
+            </div>
+            <div class="modal-actions">
+                <button type="button" id="btn-close-admin" class="btn secondary">Cancel</button>
+                <button type="button" id="btn-save-admin" class="btn primary" style="background-color: var(--red-500);">Save Key</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Human Verification Modal -->
+    <div class="modal-overlay hidden" id="modal-verification">
+        <div class="modal card" style="max-width: 600px;">
+            <h2>Verifiable Loop (Human-in-the-loop)</h2>
+            <p class="text-muted text-sm mb-4">Please verify the OCR extracted values before saving to your catalog.</p>
+            
+            <form id="nutrition-form">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Product Name</label>
+                        <input type="text" id="input-name" placeholder="Unknown Product" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Calories (kcal)</label>
+                        <input type="number" id="input-cal" step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Protein (g)</label>
+                        <input type="number" id="input-protein" step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Carbs (g)</label>
+                        <input type="number" id="input-carbs" step="0.1" required>
+                    </div>
+                    <div class="form-group warning-state" id="group-sugar">
+                        <label>Sugar (g) <span class="badge warning hidden">Check</span></label>
+                        <input type="number" id="input-sugar" step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Fat (g)</label>
+                        <input type="number" id="input-fat" step="0.1" required>
+                    </div>
+                    <div class="form-group warning-state" id="group-sodium">
+                        <label>Sodium (mg) <span class="badge warning hidden">Check</span></label>
+                        <input type="number" id="input-sodium" step="0.1" required>
+                    </div>
+                    
+                    <div class="form-group" style="grid-column: span 2;">
+                        <label>Vitamins & Minerals</label>
+                        <input type="text" id="input-vitamins" placeholder="e.g. Calcium 20%, Vitamin C 10%">
+                    </div>
+                    
+                    <div class="form-group" style="grid-column: span 2;">
+                        <label>AI Nutritionist Summary</label>
+                        <textarea id="input-summary" rows="3" placeholder="AI analysis will appear here..." style="resize:vertical; padding:0.625rem; border: 1px solid var(--border-light); border-radius:8px; font-family:inherit; font-size:0.875rem;"></textarea>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" id="btn-cancel-verify" class="btn secondary">Discard</button>
+                    <button type="button" id="btn-verify" class="btn primary">Verify & Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
