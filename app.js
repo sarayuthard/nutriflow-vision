@@ -166,22 +166,22 @@ function renderCatalog() {
     const list = document.getElementById('catalog-list');
     list.innerHTML = '';
     if (state.catalog.length === 0) {
-        list.innerHTML = '<li class="text-muted text-sm">No items verified yet.</li>';
+        list.innerHTML = '<div class="text-muted text-sm" style="padding:1rem;">No history found. Try taking a photo!</div>';
         return;
     }
     [...state.catalog].reverse().forEach(item => {
-        const li = document.createElement('li');
-        li.className = 'catalog-item';
-        li.innerHTML = `
-            <div>
-                <strong>${item.name}</strong>
-                <div class="text-muted text-sm">${item.calories} kcal | Pro: ${item.protein}g</div>
-            </div>
-            <div style="display:flex; align-items:center; font-weight:bold; color:var(--emerald-500);">
-                Score: ${item.healthScore}
+        const div = document.createElement('div');
+        div.className = 'food-card';
+        div.innerHTML = `
+            <div class="food-card-img" style="font-size:2rem;">📷</div>
+            <div class="food-card-body">
+                <div class="food-card-title">${item.name}</div>
+                <div class="food-card-score">Score: ${item.healthScore || 'N/A'}</div>
+                <div class="food-card-detail">${item.ai_summary || item.calories + ' kcal'}</div>
             </div>
         `;
-        list.appendChild(li);
+        div.addEventListener('click', () => showHealthProfiler(item));
+        list.appendChild(div);
     });
 }
 
@@ -304,26 +304,38 @@ function initCameraControls() {
     const videoElement = document.getElementById('camera-stream');
     const canvasElement = document.getElementById('snapshot-canvas');
     const shutterBtn = document.getElementById('btn-snap');
-    const shutterControl = document.getElementById('shutter-control');
     const btnCamera = document.getElementById('btn-camera');
     const btnUpload = document.getElementById('btn-upload');
     const fileInput = document.getElementById('file-input');
+    const cameraOverlay = document.getElementById('camera-fullscreen-overlay');
+    const btnCloseCamera = document.getElementById('camera-close-btn');
+    const btnGalleryFullscreen = document.getElementById('btn-gallery-fullscreen');
+
+    function stopCamera() {
+        if (localMediaStream) {
+            localMediaStream.getTracks().forEach(track => track.stop());
+            localMediaStream = null;
+        }
+        cameraOverlay.classList.add('hidden');
+    }
+
+    btnCloseCamera.addEventListener('click', stopCamera);
 
     btnCamera.addEventListener('click', async () => {
         if (!checkFreemiumAccess()) return;
         try {
             logSQL("-- Requesting WebRTC camera access");
-            writeAILog("[System] Initializing camera stream...");
+            writeAILog("[System] Initializing fullscreen camera stream...");
+            cameraOverlay.classList.remove('hidden');
+            videoElement.classList.remove('hidden');
+            canvasElement.classList.add('hidden');
             const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
             localMediaStream = stream;
             videoElement.srcObject = stream;
-            videoElement.classList.remove('hidden');
-            canvasElement.classList.add('hidden');
-            shutterControl.classList.remove('hidden');
-            document.querySelector('.viewfinder-placeholder').classList.add('hidden');
         } catch (err) {
             writeAILog(`[Error] Camera access denied: ${err.message}`, 'var(--red-500)');
             logSQL(`-- ERROR: navigator.mediaDevices.getUserMedia failed.`);
+            stopCamera();
         }
     });
 
@@ -334,10 +346,7 @@ function initCameraControls() {
         canvasElement.height = videoElement.videoHeight;
         context.drawImage(videoElement, 0, 0, canvasElement.width, canvasElement.height);
         
-        localMediaStream.getTracks().forEach(track => track.stop());
-        videoElement.classList.add('hidden');
-        canvasElement.classList.remove('hidden');
-        shutterControl.classList.add('hidden');
+        stopCamera();
         
         writeAILog("[System] Photo captured. Starting analysis...");
         const base64 = canvasElement.toDataURL('image/jpeg');
@@ -349,24 +358,26 @@ function initCameraControls() {
         fileInput.click();
     });
 
+    btnGalleryFullscreen.addEventListener('click', () => {
+        fileInput.click();
+    });
+
     fileInput.addEventListener('change', (e) => {
         if (e.target.files && e.target.files[0]) {
             const reader = new FileReader();
             reader.onload = (event) => {
-                document.querySelector('.viewfinder-placeholder').classList.add('hidden');
-                videoElement.classList.add('hidden');
-                canvasElement.classList.remove('hidden');
-                shutterControl.classList.add('hidden');
+                stopCamera();
                 
                 const img = new Image();
                 img.onload = () => {
-                    const context = canvasElement.getContext('2d');
-                    canvasElement.width = img.width;
-                    canvasElement.height = img.height;
-                    context.drawImage(img, 0, 0, canvasElement.width, canvasElement.height);
+                    const canvas = document.createElement('canvas');
+                    const context = canvas.getContext('2d');
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    context.drawImage(img, 0, 0, canvas.width, canvas.height);
                     
                     writeAILog("[System] Image uploaded. Starting analysis...");
-                    const base64 = canvasElement.toDataURL('image/jpeg');
+                    const base64 = canvas.toDataURL('image/jpeg');
                     runScannerSimulation({ name: 'Uploaded Photo' }, base64);
                 }
                 img.src = event.target.result;
@@ -403,13 +414,21 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Render presets
     const gallery = document.getElementById('presets-gallery');
-    gallery.innerHTML = '<span class="text-muted text-sm" style="margin-right:10px;">Presets:</span>';
+    gallery.innerHTML = '';
     PRESETS.forEach(p => {
-        const btn = document.createElement('button');
-        btn.className = 'preset-chip';
-        btn.textContent = p.name;
-        btn.addEventListener('click', () => { if (checkFreemiumAccess()) runScannerSimulation(p); });
-        gallery.appendChild(btn);
+        const div = document.createElement('div');
+        div.className = 'food-card';
+        div.style.cursor = 'pointer';
+        div.innerHTML = `
+            <div class="food-card-img" style="font-size:2rem; background:#e0f2fe;">✨</div>
+            <div class="food-card-body">
+                <div class="food-card-title">${p.name}</div>
+                <div class="food-card-score" style="color:var(--primary-color);">AI Data</div>
+                <div class="food-card-detail">${p.ai_summary}</div>
+            </div>
+        `;
+        div.addEventListener('click', () => { if (checkFreemiumAccess()) runScannerSimulation(p); });
+        gallery.appendChild(div);
     });
 
     // Event Listeners
